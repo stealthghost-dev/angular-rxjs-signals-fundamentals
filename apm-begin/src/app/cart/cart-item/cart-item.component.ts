@@ -24,17 +24,24 @@ export class CartItemComponent {
   // Quantity available (hard-coded to 8)
   // Mapped to an array from 1-8
   // SEE FINAL SOLUTION TO HANDLE DELETE CART ITEMS THAT ARE THE SAME.
-  qtyArr = [...Array(8).keys()].map(x => x + 1);
+  //qtyArr = [...Array(8).keys()].map(x => x + 1);
+
+  // Build an array of numbers from 1 to qty available
+    qtyArr = computed<Number[]>(() =>
+      [...Array(this.item().product.quantityInStock).keys()].map(x => x + 1));
 
   // Calculate the extended price
   //exPrice = this.cartItem?.quantity * this.cartItem?.product.price;
 
   exPrice = computed(() => this.item().quantity * this.item().product.price );
 
-  onQuantitySelected(quantity: number): void {
+  onQuantitySelected2(quantity: number): void {
     //this.cartService.updateCart(this.cartItem, Number(quantity));
     //input & signals workaround
     this.cartService.updateCart(this.item(), Number(quantity));
+  }
+  onQuantitySelected(quantity: number): void {
+    this.cartService.updateQuantity(this.item(), Number(quantity));
   }
 
   removeFromCart(): void {

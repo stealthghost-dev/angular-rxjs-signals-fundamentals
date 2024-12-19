@@ -13,14 +13,11 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
   providedIn: 'root'
 })
 export class ProductService {
-  // Just enough here for the code to compile
   private productsUrl = 'api/products';
-
   /**
    * Old Way
    */
   // constructor(private http: HttpClient) {   
-
   // }
 
   //angular 14+
@@ -34,13 +31,6 @@ export class ProductService {
 
   //Hold id of the user-selected product as a signal
   selectedProductId = signal<number | undefined>(undefined);
-
-  private handleError(err: HttpErrorResponse): Observable<never> { //use keyword never to not omit anything and doesn't complete
-    const formattedMessage = this.errorService.formatError(err);
-    //return throwError(() => formattedMessage); //rxjs, create a replacement observable
-    //OR
-    throw formattedMessage; //pure js
-  }
 
   // getProductsold(): Observable<Product[]> {
   //   return this.http.get<Product[]>(this.productsUrl)
@@ -72,10 +62,13 @@ export class ProductService {
       shareReplay(1),
       catchError(err =>
         //this.handleError(err)
-        of({ data: [], error: this.errorService.formatError(err) } as Result<Product[]>)
-      )
+        of({ 
+          data: [], 
+          error: this.errorService.formatError(err) 
+        } as Result<Product[]>))
     );
-  private productsResult = toSignal(this.productsResult$, { initialValue: ({ data: [], error: undefined } as Result<Product[]>) });
+  private productsResult = toSignal(this.productsResult$, 
+    { initialValue: ({ data: []} as Result<Product[]>) });
   products = computed(() => this.productsResult().data);
   productsError = computed(() => this.productsResult().error);
 
@@ -130,29 +123,34 @@ export class ProductService {
   //         );
   //     })
   //   );
+
+  // Find the product in the existing array of products
+  private foundProduct = computed(() => {
+    // Dependent signals
+    const p = this.products();
+    const id = this.selectedProductId();
+    if (p && id) {
+      return p.find(product => product.id === id);
+    }
+    return undefined;
+  })
+
     //changed to signal
-    private productResult$ = toObservable(this.selectedProductId) //this.productSelected$ //was a behavior subject
+  // Get the related set of reviews
+  private productResult$ = toObservable(this.foundProduct)
     .pipe(
-      filter(Boolean), //checks for null or undefined
-      switchMap(id => {
-        const productUrl = this.productsUrl + '/' + id;
-        return this.http.get<Product>(productUrl)
-          .pipe(
-            tap(() => console.log('In http.get pipeline for single item - DECLARATIVE')),
-            //map(product=>this.getProductionWithRevies(product)), --wont work missing subscribe
-            switchMap(product => this.getProductWithReviews(product)),
-            catchError(err => of({
-              data: undefined,
-              error: this.errorService.formatError(err)
-            } as Result<Product>))
-          );
-      }),
-      map(p => ({data: p} as Result<Product>))
+      filter(Boolean),
+      switchMap(product => this.getProductWithReviews(product)),
+      map(p => ({ data: p } as Result<Product>)),
+      catchError(err => of({
+        data: undefined,
+        error: this.errorService.formatError(err)
+      } as Result<Product>))
     );
 
-    private productResult = toSignal(this.productResult$);
-    product = computed(() => this.productResult()?.data);
-    productError = computed(() => this.productResult()?.error);
+  private productResult = toSignal(this.productResult$);
+  product = computed(() => this.productResult()?.data);
+  productError = computed(() => this.productResult()?.error);
 
   //Combining Observables
   // product$ = combineLatest([

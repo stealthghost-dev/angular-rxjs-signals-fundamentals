@@ -15,7 +15,7 @@ import { catchError, EMPTY, pipe, Subscription, tap } from 'rxjs';
 export class ProductListComponent implements OnInit, OnDestroy {
   sub!: Subscription;
   ngOnDestroy(): void {
-    this.sub.unsubscribe()
+    //this.sub.unsubscribe()
   }
 
   private productService = inject(ProductService);
