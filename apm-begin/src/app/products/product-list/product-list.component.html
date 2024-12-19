@@ -6,26 +6,46 @@
         {{pageTitle}}
       </div>
 
-      <div class='card-body'
-       *ngIf="products.length">
+
+      <!-- <div *ngIf="products$ | async as products"></div> -->
+
+      <!-- <div class='card-body' *ngIf="products.length"> -->
+        <!-- <div class='card-body' *ngIf="products$ | async as products"> -->
+      <!-- Using tosignal -->
+      <div class='card-body' *ngIf="products() as products">
         <div class='list-group'>
-          <button type='button'
-                  class='list-group-item'
-                  *ngFor='let product of products'
-                  [ngClass]="{'active': product.id === selectedProductId}"
-                  (click)='onSelected(product.id)'>
+          <!-- <button type='button'
+                        class='list-group-item'
+                        *ngFor='let product of products'
+                        [ngClass]="{'active': product.id === selectedProductId}"
+                        (click)='onSelected(product.id)'>
+                  {{ product.productName }}
+                </button> -->
+          <!-- <button type='button' class='list-group-item' 
+          *ngFor='let product of products'
+            [ngClass]="{'active': product.id === selectedProductId}" 
+            (click)='onSelected(product.id)'>
+            {{ product.productName }}
+          </button> -->
+          <button type='button' class='list-group-item' 
+          *ngFor='let product of products'
+            [ngClass]="{'active': product.id === (selectedProductId$ | async) }" 
+            (click)='onSelected(product.id)'>
             {{ product.productName }}
           </button>
         </div>
       </div>
     </div>
     <div class="alert alert-danger"
-         *ngIf="errorMessage">
-      {{errorMessage}}
+         *ngIf="errorMessage()">
+      {{errorMessage()}}
     </div>
   </div>
 
   <div class='col-md-8'>
-    <pm-product-detail [productId]="selectedProductId"/>
+    <!-- angular 15.1+ simplified component single references < /> -->
+    <!-- <pm-product-detail [productId]="(selectedProductId$ | async) ?? 0 "/> -->
+    <!--react to product id emitted by the service behavior subject -->
+    <pm-product-detail />
   </div>
 </div>

@@ -11,3 +11,8 @@ export interface Product {
   hasReviews?: boolean;
   reviews?: Review[];
 }
+
+export interface Result<T> { //anytype
+  data: T | undefined;
+  error?: string;
+}

@@ -1,11 +1,13 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { inject, Injectable } from '@angular/core';
-import { catchError, EMPTY, map, Observable, of, tap, throwError } from 'rxjs';
-import { Product } from './product';
+import { computed, inject, Injectable } from '@angular/core';
+import { BehaviorSubject, catchError, combineLatest, EMPTY, filter, map, Observable, of, shareReplay, switchMap, tap, throwError } from 'rxjs';
+import { Product, Result } from './product';
 import { ProductData } from './product-data';
 import { HttpErrorService } from '../utilities/http-error.service';
 import { ReviewService } from '../reviews/review.service';
 import { Review } from '../reviews/review';
+
+import { toSignal } from '@angular/core/rxjs-interop';
 
 @Injectable({
   providedIn: 'root'
@@ -25,6 +27,10 @@ export class ProductService {
   private http = inject(HttpClient);
   private errorService = inject(HttpErrorService);
   private reviewService = inject(ReviewService)
+
+  //Create a subject for notifications
+  private productSelectedSubject = new BehaviorSubject<number | undefined>(undefined);
+  readonly productSelected$ = this.productSelectedSubject.asObservable();
 
   private handleError(err: HttpErrorResponse): Observable<never> { //use keyword never to not omit anything and doesn't complete
     const formattedMessage = this.errorService.formatError(err);
@@ -53,6 +59,32 @@ export class ProductService {
     );
   }
 
+  //DECLARATIVE APPROACH, prevents from being modified
+  //readonly products$ =  this.http.get<Product[]>(this.productsUrl)
+  private productsResult$ =  this.http.get<Product[]>(this.productsUrl) //toSignal is readonly
+  .pipe(
+    map(p => ({ data: p, error: undefined} as Result<Product[]> )),
+    tap(() => console.log('In http.get pipeline')),
+    tap(p => console.log(JSON.stringify(p))),
+    shareReplay(1),
+    catchError(err => 
+      //this.handleError(err)
+      of({ data: [], error: this.errorService.formatError(err) } as Result<Product[]>)
+    )
+  );
+  private productsResult = toSignal(this.productsResult$, { initialValue: ({ data: [], error: undefined} as Result<Product[]> )});
+  products = computed(() => this.productsResult().data);
+  productsError = computed(() => this.productsResult().error);
+  
+  // products = computed(() => {
+  //   try {
+  //     return toSignal(this.products$, { initialValue: [] as Product[]})();
+  //   } catch (error) {
+  //     return [] as Product[];
+  //   }
+  // });
+
+
   getProductold(id: number): Observable<Product> {
     const productUrl = this.productsUrl + '/' + id;
     return this.http.get<Product>(productUrl).pipe(
@@ -60,19 +92,62 @@ export class ProductService {
     );
   }
 
-  getProduct(id: number): Observable<Product> {
+  //higher order operators
+  //Use Concat map for order of operations, it waits for each to complete, used for delete, update
+  //Mergmap - sets of data no care
+  //Switchmap - want to cancel requests at different times
+
+  getProduct_2Declarative(id: number): Observable<Product> {
     const productUrl = this.productsUrl + '/' + id;
     return this.http.get<Product>(productUrl)
     .pipe(
       tap(() => console.log('In http.get pipeline for single item')),
+    
       //map(product=>this.getProductionWithRevies(product)), --wont work missing subscribe
-      map(product=>this.getProductWithReviews(product)),
+      switchMap(product=>this.getProductWithReviews(product)),
       tap(x=> console.log(x)),
       catchError(err=> this.handleError(err))
     );
   }
+
+  //DECLARATIVE APPROACH FOR SINGLE
+  readonly product$ = this.productSelected$
+    .pipe(
+      filter(Boolean), //checks for null or undefined
+      switchMap(id=> {
+        const productUrl = this.productsUrl + '/' + id;
+        return this.http.get<Product>(productUrl)
+        .pipe(
+          tap(() => console.log('In http.get pipeline for single item - DECLARATIVE')),
+        
+          //map(product=>this.getProductionWithRevies(product)), --wont work missing subscribe
+          switchMap(product=>this.getProductWithReviews(product)),
+          tap(x=> console.log(x)),
+          catchError(err=> this.handleError(err))
+        );
+      })
+    );
   
-  getProductWithReviews(product: Product): Observable<Product> {
+    //Combining Observables
+    // product$ = combineLatest([
+    //   this.productSelected$,
+    //   this.products$
+    // ]).pipe(
+    //   //tap(x => x),
+    //   map(([selectedProductId, products]) => //js destructuring define var for each arry element
+    //     products.find(product => product.id === selectedProductId)
+    // ), 
+    // filter(Boolean),
+    // switchMap(product => this.getProductWithReviews(product)),
+    // catchError(err => this.handleError(err))
+    // );
+
+
+    productSelected(selectedProductId: number): void {
+      this.productSelectedSubject.next(selectedProductId);
+    }
+
+  private getProductWithReviews(product: Product): Observable<Product> {
     if (product.hasReviews) {
       return this.http.get<Review[]>(this.reviewService.getReviewUrl(product.id))
         .pipe(
@@ -86,3 +161,5 @@ export class ProductService {
 
 
 }
+
+
