@@ -40,11 +40,13 @@ export class ProductListComponent implements OnInit, OnDestroy {
   //Use ToSignal
   products = this.productService.products;
   errorMessage = this.productService.productsError;
+  
   // Selected product id to highlight the entry
   //selectedProductId: number = 0;
   
   //for subscribing notifications subject
-  readonly selectedProductId$ = this.productService.productSelected$;
+ // readonly selectedProductId$ = this.productService.productSelected$;
+ selectedProductId = this.productService.selectedProductId;
 
   ngOnInit(): void {
    /*

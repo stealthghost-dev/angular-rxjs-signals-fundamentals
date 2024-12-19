@@ -1,4 +1,4 @@
-import { Component, inject, Input, OnChanges, OnDestroy, SimpleChanges } from '@angular/core';
+import { Component, computed, inject, Input, OnChanges, OnDestroy, SimpleChanges } from '@angular/core';
 
 import { NgIf, NgFor, CurrencyPipe, AsyncPipe } from '@angular/common';
 import { Product } from '../product';
@@ -22,25 +22,29 @@ export class ProductDetailComponent {
   //subItem!: Subscription;
   //product: Product | null = null;
 
-  errorMessage = '';
-
+  
   private productService = inject(ProductService);
   private cartService = inject(CartService);
 
   //Declarative Subject
- product$ = this.productService.product$
-  .pipe(
-    tap(() => console.log('in component pipeline.')),
-    catchError(err=> {
-      this.errorMessage = err;
-      return EMPTY;
-    })
-  );
+//  product$ = this.productService.product$
+//   .pipe(
+//     tap(() => console.log('in component pipeline.')),
+//     catchError(err=> {
+//       this.errorMessage = err;
+//       return EMPTY;
+//     })
+//   );
+  product = this.productService.product;
+  errorMessage = this.productService.productError;
+
 
   // Set the page title - Replaced by Signals
   //pageTitle = this.product ? `Product Detail for: ${this.product.productName}` : 'Product Detail';
-  pageTitle = 'ProductDetail'
   //pageTitle = this.product ? `Product Detail for: ${this.product.productName}` : 'Product Detail';
+  pageTitle = computed(() => this.product() 
+  ? `Product Detail for: ${this.product()?.productName}` //why the ? mark, because it is optional chaining, if product is null, it will not throw an error
+  : 'Product Detail');
 
   //handled by Behavior Subject subscribers
   /*
